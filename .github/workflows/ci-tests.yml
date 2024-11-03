@@ -1,0 +1,106 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Run Python unit tests
+      - name: Run Python Unit Tests
+        run: |
+          python -m unittest discover -s tests -p 'test_create_fluent_bit_config.py' -v
+
+      # Set up Lua environment
+      - name: Install Lua and LuaRocks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.3 lua5.3-dev luarocks
+
+      - name: Install Lua Dependencies
+        run: |
+          sudo luarocks install busted
+
+      # Run Lua unit tests
+      - name: Run Lua Unit Tests
+        working-directory: tests
+        run: |
+          busted test_docker_metadata.lua
+
+  e2e-tests:
+    name: End-to-End Tests
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:20.10-dind
+        options: --privileged
+    env:
+      LOGZIO_LOGS_TOKEN: ${{ secrets.LOGZIO_LOGS_TOKEN }}
+      LOGZIO_API_TOKEN: ${{ secrets.LOGZIO_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Install Docker Compose
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      # Pull Docker images
+      - name: Pull Docker Images
+        run: |
+          docker-compose pull
+
+      # Run Docker Compose
+      - name: Run Docker Compose
+        run: docker-compose up -d
+
+      # Wait for logs to be ingested
+      - name: Wait for Logs to be Ingested
+        run: sleep 60  # Adjust as necessary
+
+      # Run End-to-End Tests
+      - name: Run E2E Tests
+        run: python tests/test_e2e.py
+
+      # Output Docker Collector Logs
+      - name: Output Docker Collector Logs
+        if: always()
+        run: docker logs docker-logs-collector || true
+
+      # Tear down Docker Compose
+      - name: Tear Down Docker Compose
+        if: always()
+        run: docker-compose down
