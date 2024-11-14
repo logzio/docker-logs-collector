@@ -32,7 +32,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
 
     @patch.dict(os.environ, {'LOGZIO_LOGS_TOKEN': 'test_token'})
     def test_default_configuration(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Log_Level    info', config)
         self.assertIn('logzio_token test_token', config)
         self.assertIn('logzio_url   https://listener.logz.io:8071', config)
@@ -50,13 +51,14 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'IGNORE_OLDER': '1h'
     })
     def test_multiline_configuration(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Log_Level    debug', config)
         self.assertIn('multiline.parser multiline-regex', config)
         self.assertIn('read_from_head false', config)
         self.assertIn('ignore_older 1h', config)
 
-        multiline_config = create_fluent_bit_config.create_multiline_parser_config()
+        multiline_config = create_fluent_bit_config.create_multiline_parser_config(config_obj)
         self.assertIn('name          multiline-regex', multiline_config)
         self.assertIn('rule      "start_state"   "/^[ERROR]/"  "cont"', multiline_config)
         self.assertIn(r'rule      "cont"          "^\s+at"                     "cont"', multiline_config)
@@ -68,8 +70,9 @@ class TestCreateFluentBitConfig(unittest.TestCase):
     })
     def test_conflicting_container_filters(self):
         with self.assertRaises(ValueError) as context:
-            create_fluent_bit_config.create_fluent_bit_config()
-        self.assertIn('Cannot use both matchContainerName and skipContainerName', str(context.exception))
+            config_obj = create_fluent_bit_config.Config()
+            create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertIn('Cannot use both MATCH_CONTAINER_NAME and SKIP_CONTAINER_NAMES', str(context.exception))
 
     @patch.dict(os.environ, {
         'LOGZIO_LOGS_TOKEN': 'test_token',
@@ -78,8 +81,9 @@ class TestCreateFluentBitConfig(unittest.TestCase):
     })
     def test_conflicting_image_filters(self):
         with self.assertRaises(ValueError) as context:
-            create_fluent_bit_config.create_fluent_bit_config()
-        self.assertIn('Cannot use both matchImageName and skipImageName', str(context.exception))
+            config_obj = create_fluent_bit_config.Config()
+            create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertIn('Cannot use both MATCH_IMAGE_NAME and SKIP_IMAGE_NAMES', str(context.exception))
 
     @patch.dict(os.environ, {
         'LOGZIO_LOGS_TOKEN': 'test_token',
@@ -87,9 +91,13 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'SET_FIELDS': 'service:web,version:1.0.0'
     })
     def test_additional_and_set_fields(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
-        self.assertIn('[FILTER]\n    Name modify\n    Match *\n    Add env production\n    Add team backend', config)
-        self.assertIn('[FILTER]\n    Name modify\n    Match *\n    Set service web\n    Set version 1.0.0', config)
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertIn('Name modify', config)
+        self.assertIn('Add env production', config)
+        self.assertIn('Add team backend', config)
+        self.assertIn('Set service web', config)
+        self.assertIn('Set version 1.0.0', config)
 
     @patch.dict(os.environ, {
         'LOGZIO_LOGS_TOKEN': 'test_token',
@@ -97,7 +105,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'LOG_LEVEL': 'info'
     })
     def test_match_container_name(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Regex docker_container_name my_app', config)
 
     @patch.dict(os.environ, {
@@ -106,7 +115,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'LOG_LEVEL': 'info'
     })
     def test_skip_container_names(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Exclude docker_container_name db', config)
         self.assertIn('Exclude docker_container_name cache', config)
 
@@ -116,7 +126,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'LOG_LEVEL': 'info'
     })
     def test_match_image_name(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Regex docker_container_image my_image', config)
 
     @patch.dict(os.environ, {
@@ -125,7 +136,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'LOG_LEVEL': 'info'
     })
     def test_skip_image_names(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Exclude docker_container_image redis', config)
         self.assertIn('Exclude docker_container_image postgres', config)
 
@@ -136,15 +148,17 @@ class TestCreateFluentBitConfig(unittest.TestCase):
     })
     def test_conflicting_line_filters(self):
         with self.assertRaises(ValueError) as context:
-            create_fluent_bit_config.create_fluent_bit_config()
-        self.assertIn('Cannot use both includeLines and excludeLines', str(context.exception))
+            config_obj = create_fluent_bit_config.Config()
+            create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertIn('Cannot use both INCLUDE_LINE and EXCLUDE_LINES', str(context.exception))
 
     @patch.dict(os.environ, {
         'LOGZIO_LOGS_TOKEN': 'test_token',
         'INCLUDE_LINE': 'ERROR',
     })
     def test_include_line(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Regex message ERROR', config)
 
     @patch.dict(os.environ, {
@@ -152,7 +166,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'EXCLUDE_LINES': 'DEBUG,TRACE',
     })
     def test_exclude_lines(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('Exclude message DEBUG', config)
         self.assertIn('Exclude message TRACE', config)
 
@@ -171,7 +186,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'HEADERS': 'X-Api-Key:12345'
     })
     def test_custom_headers(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('headers      X-Api-Key:12345', config)
 
     @patch.dict(os.environ, {
@@ -180,7 +196,8 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         'OUTPUT_ID': 'custom_output_id',
     })
     def test_custom_logzio_url_and_output_id(self):
-        config = create_fluent_bit_config.create_fluent_bit_config()
+        config_obj = create_fluent_bit_config.Config()
+        config = create_fluent_bit_config.create_fluent_bit_config(config_obj)
         self.assertIn('logzio_url   https://custom-listener.logz.io:8071', config)
         self.assertIn('id custom_output_id', config)
 

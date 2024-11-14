@@ -7,7 +7,10 @@ M.DOCKER_VAR_DIR = '/var/lib/docker/containers/'
 M.DOCKER_CONTAINER_CONFIG_FILE = '/config.v2.json'
 
 -- Cache Time-To-Live in seconds
-M.CACHE_TTL_SEC = 300
+M.CACHE_TTL_SEC = 300  -- Cache entries are valid for 5 minutes
+
+-- Cache Cleanup Interval in seconds
+M.CACHE_CLEANUP_INTERVAL = 600  -- Perform cleanup every 10 minutes
 
 -- Table defining patterns to extract metadata from Docker config file
 M.DOCKER_CONTAINER_METADATA = {
@@ -18,6 +21,7 @@ M.DOCKER_CONTAINER_METADATA = {
 
 -- Cache to store metadata for containers
 M.cache = {}
+M.last_cleanup_time = os.time()
 
 local debug_mode = os.getenv("DEBUG_MODE") == "true"
 
@@ -44,7 +48,7 @@ function M.get_container_metadata_from_disk(container_id)
   local fl = io.open(docker_config_file, 'r')
   if fl == nil then
     debug_print("Failed to open file:", docker_config_file)
-    return nil
+    return { source = 'disk' }
   end
 
   local data = { time = os.time() }
@@ -69,9 +73,29 @@ function M.get_container_metadata_from_disk(container_id)
   end
 end
 
+-- Function to clean up expired cache entries
+function M.cleanup_cache()
+  local current_time = os.time()
+  for container_id, cached_data in pairs(M.cache) do
+    if current_time - cached_data['time'] > M.CACHE_TTL_SEC then
+      M.cache[container_id] = nil
+      debug_print("Removed expired cache entry for container:", container_id)
+    end
+  end
+  M.last_cleanup_time = current_time
+  debug_print("Cache cleanup completed at:", os.date('%Y-%m-%d %H:%M:%S', current_time))
+end
+
 -- Function to enrich log records with Docker metadata
 function M.enrich_with_docker_metadata(tag, timestamp, record)
   debug_print("Enriching record with tag:", tag)
+
+  -- Perform cache cleanup if necessary
+  local current_time = os.time()
+  if current_time - M.last_cleanup_time > M.CACHE_CLEANUP_INTERVAL then
+    debug_print("Performing cache cleanup...")
+    M.cleanup_cache()
+  end
 
   local container_id = M.get_container_id_from_tag(tag)
   if not container_id then
@@ -85,17 +109,24 @@ function M.enrich_with_docker_metadata(tag, timestamp, record)
   new_record['log'] = nil
 
   local cached_data = M.cache[container_id]
-  if cached_data == nil or (os.time() - cached_data['time'] > M.CACHE_TTL_SEC) then
+  if cached_data == nil or (current_time - cached_data['time'] > M.CACHE_TTL_SEC) then
     cached_data = M.get_container_metadata_from_disk(container_id)
-    M.cache[container_id] = cached_data
-    new_record['source'] = 'disk'
+    if cached_data then
+      M.cache[container_id] = cached_data
+      new_record['source'] = 'disk'
+    else
+      debug_print("No metadata found for container:", container_id)
+      new_record['source'] = 'unknown'
+    end
   else
     new_record['source'] = 'cache'
   end
 
   if cached_data then
     for key, value in pairs(cached_data) do
-      new_record[key] = value
+      if key ~= 'time' then
+        new_record[key] = value
+      end
     end
   end
 
