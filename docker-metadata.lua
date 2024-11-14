@@ -124,7 +124,7 @@ function M.enrich_with_docker_metadata(tag, timestamp, record)
 
   if cached_data then
     for key, value in pairs(cached_data) do
-      if key ~= 'time' then
+      if key ~= 'time' then -- Exclude the 'time' field
         new_record[key] = value
       end
     end
