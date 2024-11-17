@@ -106,4 +106,4 @@ jobs:
       - name: Remove Local Docker Image
         if: always()
         run: |
-          docker rmi logzio/docker-collector-logs-fluentbit:latest || true  
+          docker rmi logzio/docker-logs-collector:amd64-test || true  
