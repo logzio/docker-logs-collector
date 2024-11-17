@@ -1,6 +1,6 @@
-# Dockerfile.amd64
+# syntax=docker/dockerfile:1
 
-FROM python:3.12.4-slim AS base
+FROM python:3.12.4-slim-bullseye AS base
 
 # Install dependencies using apt-get
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -15,10 +15,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdb \
     && rm -rf /var/lib/apt/lists/*
 
-# Create the plugins directory and download the Logz.io plugin
+# Define build argument for architecture
+ARG TARGETARCH
+
+# Set the plugin URL based on the architecture
+ENV LOGZIO_PLUGIN_URL_AMD64=https://github.com/logzio/fluent-bit-logzio-output/raw/master/build/out_logzio-linux.so
+ENV LOGZIO_PLUGIN_URL_ARM64=https://github.com/logzio/fluent-bit-logzio-output/raw/master/build/out_logzio-linux-arm64.so
+
+# Determine the correct plugin URL based on TARGETARCH
 RUN mkdir -p /fluent-bit/plugins && \
-    wget -O /fluent-bit/plugins/out_logzio.so \
-    https://github.com/logzio/fluent-bit-logzio-output/raw/master/build/out_logzio-linux.so
+    if [ "$TARGETARCH" = "amd64" ]; then \
+        export LOGZIO_PLUGIN_URL=$LOGZIO_PLUGIN_URL_AMD64; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+        export LOGZIO_PLUGIN_URL=$LOGZIO_PLUGIN_URL_ARM64; \
+    else \
+        echo "Unsupported architecture: $TARGETARCH"; exit 1; \
+    fi && \
+    wget -O /fluent-bit/plugins/out_logzio.so $LOGZIO_PLUGIN_URL
 
 # Set working directory
 WORKDIR /opt/fluent-bit
@@ -31,9 +44,9 @@ COPY docker-metadata.lua /fluent-bit/etc/docker-metadata.lua
 COPY create_fluent_bit_config.py /opt/fluent-bit/docker-collector-logs/create_fluent_bit_config.py
 
 # Use official Fluent Bit image for Fluent Bit binaries
-FROM fluent/fluent-bit:3.1.4 AS fluent-bit
+FROM fluent/fluent-bit:1.9.10 AS fluent-bit
 
-# Copy Fluent Bit binary and plugins.conf to the base image
+# Copy Fluent Bit binary to the base image
 FROM base
 COPY --from=fluent-bit /fluent-bit/bin/fluent-bit /usr/local/bin/fluent-bit
 

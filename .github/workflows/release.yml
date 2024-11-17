@@ -6,12 +6,8 @@ on:
 
 jobs:
   build-and-push-images:
-    name: Build and Push Docker Images
+    name: Build and Push Multi-Arch Docker Image
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        architecture: [amd64, arm64]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,16 +24,15 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image
+      - name: Build and push multi-arch image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.${{ matrix.architecture }}
-          platforms: linux/${{ matrix.architecture }}
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
-            logzio/docker-logs-collector-${{ matrix.architecture }}:latest
-            logzio/docker-logs-collector-${{ matrix.architecture }}:${{ github.ref_name }}
+            logzio/docker-logs-collector:latest
+            logzio/docker-logs-collector:${{ github.ref_name }}
 
       - name: Logout from Docker Hub
         if: always()

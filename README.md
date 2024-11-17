@@ -19,16 +19,10 @@ If you want to ship metrics to Logz.io, see [docker-collector-metrics](https://g
 Download the appropriate Docker image for your architecture (amd64 or arm64):
 
 ```shell
-# For amd64 architecture
-docker pull logzio/docker-logs-collector-amd64:latest
-
-# For arm64 architecture
-docker pull logzio/docker-logs-collector-arm64:latest
+docker pull logzio/docker-logs-collector:latest
 ```
 
 ### 2. Run the container
-
-Replace `<ARCH>` in the image name with either amd64 or arm64 based on your system architecture.
 
 For a complete list of options, see the parameters below the code block.👇
 
@@ -38,7 +32,7 @@ docker run --name docker-logs-collector \
 -v /var/run/docker.sock:/var/run/docker.sock:ro \
 -v /var/lib/docker/containers:/var/lib/docker/containers \
 -e HEADERS="user-agent:logzio-docker-logs" \
-logzio/docker-logs-collector-<ARCH>:latest
+logzio/docker-logs-collector:latest
 ```
 
 #### Parameters

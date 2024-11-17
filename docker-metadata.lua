@@ -105,8 +105,6 @@ function M.enrich_with_docker_metadata(tag, timestamp, record)
 
   local new_record = record
   new_record['docker_container_id'] = container_id
-  new_record['message'] = record.log
-  new_record['log'] = nil
 
   local cached_data = M.cache[container_id]
   if cached_data == nil or (current_time - cached_data['time'] > M.CACHE_TTL_SEC) then

@@ -9,7 +9,7 @@ services:
       LOG_LEVEL: "info"
 
   docker-logs-collector:
-    image: logzio/docker-logs-collector-amd64:latest  
+    image: logzio/docker-logs-collector:amd64-test  
     container_name: docker-logs-collector
     environment:
       - LOGZIO_LOGS_TOKEN=${LOGZIO_LOGS_TOKEN}

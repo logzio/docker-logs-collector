@@ -165,33 +165,24 @@ def generate_filters(config):
     return filters
 
 def _get_modify_filters(config):
-    filters = ""
-    modify_filters_added = False
-
-    # Add additional fields if specified
-    if config.additional_fields:
-        fields = config.additional_fields.split(',')
-        filters += """
+    filters = """
 [FILTER]
     Name modify
     Match *
+    Rename log message
 """
+    # Add additional fields if specified
+    if config.additional_fields:
+        fields = config.additional_fields.split(',')
         for field in fields:
             try:
                 key, value = field.split(':', 1)
                 filters += f"    Add {key.strip()} {value.strip()}\n"
             except ValueError:
                 print(f"Warning: Skipping invalid additional field '{field}'. Expected format 'key:value'.")
-        modify_filters_added = True
 
     # Add set fields if specified
     if config.set_fields:
-        if not modify_filters_added:
-            filters += """
-[FILTER]
-    Name modify
-    Match *
-"""
         fields = config.set_fields.split(',')
         for field in fields:
             try:
@@ -199,6 +190,7 @@ def _get_modify_filters(config):
                 filters += f"    Set {key.strip()} {value.strip()}\n"
             except ValueError:
                 print(f"Warning: Skipping invalid set field '{field}'. Expected format 'key:value'.")
+
     return filters
 
 def _get_output_config(config):
@@ -210,7 +202,7 @@ def _get_output_config(config):
     logzio_url   {config.logzio_url}
     logzio_type  {config.logzio_type}
     id {config.output_id}
-    headers user-agent:logzio-docker-fluentbit-logs
+    headers user-agent:logzio-docker-collector-logs
 """
     if config.headers:
         output_config += f"    headers      {config.headers}\n"
