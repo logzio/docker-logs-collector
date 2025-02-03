@@ -5,6 +5,7 @@ PLUGIN_PATH = "/fluent-bit/plugins/out_logzio.so"
 FLUENT_BIT_CONF_PATH = "/fluent-bit/etc/fluent-bit.conf"
 PARSERS_MULTILINE_CONF_PATH = "/fluent-bit/etc/parsers_multiline.conf"
 
+
 # Configuration object to store environment variables
 class Config:
     def __init__(self):
@@ -27,6 +28,8 @@ class Config:
         self.headers = os.getenv('HEADERS', '')
         self.multiline_start_state_rule = os.getenv('MULTILINE_START_STATE_RULE', '')
         self.multiline_custom_rules = os.getenv('MULTILINE_CUSTOM_RULES', '')
+        self.logs_path = os.getenv('LOGS_PATH', '/var/lib/docker/containers/*/*.log')
+
 
 def create_fluent_bit_config(config):
     # Ensure that both match and skip are not set for containers and images
@@ -49,6 +52,7 @@ def create_fluent_bit_config(config):
     fluent_bit_config += _get_output_config(config)
     return fluent_bit_config
 
+
 def _get_service_config(config):
     return f"""
 [SERVICE]
@@ -59,28 +63,31 @@ def _get_service_config(config):
     Log_Level    {config.log_level}
 """
 
+
 def _get_input_config(config):
     if config.multiline_start_state_rule:
         input_config = f"""
 [INPUT]
     Name         tail
-    Path         /var/lib/docker/containers/*/*.log
+    Path         {config.logs_path}
     Parser       docker
     Tag          docker.*
     read_from_head {config.read_from_head}
     multiline.parser multiline-regex
 """
     else:
-        input_config = """
+
+        input_config = f"""
 [INPUT]
     Name         tail
-    Path         /var/lib/docker/containers/*/*.log
+    Path         {config.logs_path}
     Parser       docker
     Tag          docker.*
 """
     if config.ignore_older:
         input_config += f"    ignore_older {config.ignore_older}\n"
     return input_config
+
 
 def _get_lua_filter():
     return """
@@ -91,10 +98,12 @@ def _get_lua_filter():
     call         enrich_with_docker_metadata
 """
 
+
 def generate_filters(config):
     filters = ""
     # Add filters based on container and image names
-    if any([config.match_container_name, config.skip_container_names, config.match_image_name, config.skip_image_names]):
+    if any([config.match_container_name, config.skip_container_names, config.match_image_name,
+            config.skip_image_names]):
         filters += """
 [FILTER]
     Name         nest
@@ -164,6 +173,7 @@ def generate_filters(config):
 
     return filters
 
+
 def _get_modify_filters(config):
     filters = """
 [FILTER]
@@ -193,6 +203,7 @@ def _get_modify_filters(config):
 
     return filters
 
+
 def _get_output_config(config):
     output_config = f"""
 [OUTPUT]
@@ -207,6 +218,7 @@ def _get_output_config(config):
     if config.headers:
         output_config += f"    headers      {config.headers}\n"
     return output_config
+
 
 def create_multiline_parser_config(config):
     # Base multiline parser configuration
@@ -238,11 +250,13 @@ def create_multiline_parser_config(config):
 
     return multiline_config
 
+
 def save_config_file(config_content, filename):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as file:
         file.write(config_content)
     print(f"Configuration file '{filename}' created successfully.")
+
 
 def main():
     # Instantiate the configuration object
@@ -271,6 +285,7 @@ def main():
     if config.multiline_start_state_rule:
         multiline_config = create_multiline_parser_config(config)
         save_config_file(multiline_config, PARSERS_MULTILINE_CONF_PATH)
+
 
 if __name__ == "__main__":
     main()
