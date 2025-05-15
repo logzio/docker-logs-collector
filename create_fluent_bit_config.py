@@ -29,6 +29,7 @@ class Config:
         self.multiline_start_state_rule = os.getenv('MULTILINE_START_STATE_RULE', '')
         self.multiline_custom_rules = os.getenv('MULTILINE_CUSTOM_RULES', '')
         self.logs_path = os.getenv('LOGS_PATH', '/var/lib/docker/containers/*/*.log')
+        self.logzio_bulk_size_mb = os.getenv('LOGZIO_BULK_SIZE_MB', '')
 
 
 def create_fluent_bit_config(config):
@@ -217,6 +218,10 @@ def _get_output_config(config):
 """
     if config.headers:
         output_config += f"    headers      {config.headers}\n"
+    
+    if config.logzio_bulk_size_mb:
+        output_config += f"    logzio_bulk_size_mb {config.logzio_bulk_size_mb}\n"
+
     return output_config
 
 
