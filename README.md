@@ -42,7 +42,8 @@ logzio/docker-logs-collector:latest
 | **LOGZIO_LOGS_TOKEN**          | **Required**. Your Logz.io account logs token. Replace `<LOGS-SHIPPING-TOKEN>` with the [token](https://app.logz.io/#/dashboard/settings/general) of the account you want to ship to.                                                                                                                  |
 | **LOGZIO_URL**                 | **Default**: `https://listener.logz.io:8071`.<br> The full URL to send logs to, including your region if needed. For example, for the EU region, use `https://listener-eu.logz.io:8071`. to.                                                                                                           |
 | **LOGZIO_TYPE**                | **Default**: `logzio-docker-logs`. Sets the log type.                                                                                                                                                                                                                                                  |
-| **LOGS_PATH**                  | **Dfault**: `/var/lib/docker/containers/*/*.log`. The path to docker container logs, supports globs                                                                                                                                                                                                    |
+| **LOGZIO_BULK_SIZE_MB** | **Optional**. Max uncompressed log bulk size (MB) before flush. Plugin default: `2`. Valid: `1`-`9`. Affects memory/performance. |
+| **LOGS_PATH**                  | **Default**: `/var/lib/docker/containers/*/*.log`. The path to docker container logs, supports globs                                                                                                                                                                                                    |
 | **MATCH_CONTAINER_NAME**       | Specify a container to collect logs from. If the container's name matches, its logs are shipped; otherwise, its logs are ignored. <br /> **Note**: This option cannot be used with SKIP_CONTAINER_NAMES. Use regular expressions to keep records that match a specific field.                          |
 | **SKIP_CONTAINER_NAMES**       | Comma-separated list of containers to ignore. If a container's name matches a name on this list, its logs are ignored; otherwise, its logs are shipped. <br /> **Note**: This option cannot be used with MATCH_CONTAINER_NAME. Use regular expressions to exclude records that match a specific field. |
 | **MATCH_IMAGE_NAME**           | Specify a image to collect logs from. If the image's name matches, its logs are shipped; otherwise, its logs are ignored. <br /> **Note**: This option cannot be used with SKIP_IMAGE_NAMES. Use regular expressions to keep records that match a specific field.                                      |
@@ -64,6 +65,10 @@ logzio/docker-logs-collector:latest
 Spin up your Docker containers if you haven’t done so already. Give your logs a few minutes to get from your system to your Logz.io account.
 
 ### Change log
+- 0.1.2:
+  - Updated internal `fluent-bit-logzio-output` plugin to its latest stable release.
+  - Added `LOGZIO_BULK_SIZE_MB` environment variable to configure the output plugin's batch size.  
+  - Upgraded base image to Debian Bookworm.
 - 0.1.1:
   - Add `LOGS_PATH` option.
 - 0.1.0:

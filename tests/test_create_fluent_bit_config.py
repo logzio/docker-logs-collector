@@ -41,6 +41,7 @@ class TestCreateFluentBitConfig(unittest.TestCase):
         self.assertIn('[INPUT]', config)
         self.assertIn('Name         tail', config)
         self.assertNotIn('multiline.parser', config)
+        self.assertNotIn('logzio_bulk_size_mb', config)
 
     @patch.dict(os.environ, {
         'LOGZIO_LOGS_TOKEN': 'test_token',
@@ -223,6 +224,28 @@ class TestCreateFluentBitConfig(unittest.TestCase):
 
             # Since MULTILINE_START_STATE_RULE is not set, multiline config should not be created
             mock_create_multiline_config.assert_not_called()
+
+    @patch.dict(os.environ, {
+        'LOGZIO_LOGS_TOKEN': 'test_token',
+        'LOGZIO_BULK_SIZE_MB': '5' 
+    })
+    def test_logzio_bulk_size_mb_configured(self):
+        config_obj = create_fluent_bit_config.Config()
+        self.assertEqual(config_obj.logzio_bulk_size_mb, '5')
+        
+        config_str = create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertIn('logzio_bulk_size_mb 5', config_str)
+
+    @patch.dict(os.environ, {
+        'LOGZIO_LOGS_TOKEN': 'test_token',
+        'LOGZIO_BULK_SIZE_MB': '' 
+    })
+    def test_logzio_bulk_size_mb_empty_env_var(self):
+        config_obj = create_fluent_bit_config.Config()
+        self.assertEqual(config_obj.logzio_bulk_size_mb, '')
+
+        config_str = create_fluent_bit_config.create_fluent_bit_config(config_obj)
+        self.assertNotIn('logzio_bulk_size_mb', config_str)
 
 if __name__ == '__main__':
     unittest.main()
