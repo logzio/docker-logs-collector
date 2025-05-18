@@ -4,7 +4,6 @@ FROM python:3.12-slim-bookworm AS base
 
 # Install dependencies using apt-get
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
     bash \
     libyaml-dev \
     libsystemd-dev \
