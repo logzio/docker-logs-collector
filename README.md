@@ -65,6 +65,9 @@ logzio/docker-logs-collector:latest
 Spin up your Docker containers if you haven’t done so already. Give your logs a few minutes to get from your system to your Logz.io account.
 
 ### Change log
+- 0.2.0
+  - Upgrade FluentBit from `v3.1.4` to `v4.1.1`
+  - Upgrade Python to `v3.14.0`
 - 0.1.2:
   - Updated internal `fluent-bit-logzio-output` plugin to its latest stable release.
   - Added `LOGZIO_BULK_SIZE_MB` environment variable to configure the output plugin's batch size.  

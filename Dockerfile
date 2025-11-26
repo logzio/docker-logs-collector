@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.12-slim-bookworm AS base
+FROM python:3.14-slim-bookworm AS base
 
 # Install dependencies using apt-get
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -50,7 +50,7 @@ COPY docker-metadata.lua /fluent-bit/etc/docker-metadata.lua
 COPY create_fluent_bit_config.py /opt/fluent-bit/docker-collector-logs/create_fluent_bit_config.py
 
 # Use official Fluent Bit image for Fluent Bit binaries
-FROM fluent/fluent-bit:3.2.2 AS fluent-bit
+FROM fluent/fluent-bit:4.1.1 AS fluent-bit
 
 # Copy Fluent Bit binary to the base image
 FROM base
