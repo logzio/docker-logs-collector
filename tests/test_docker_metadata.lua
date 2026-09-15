@@ -156,7 +156,7 @@ describe("Docker Metadata Enrichment", function()
         -- Check that the metadata fields are not added
         assert.is_nil(enriched_record.docker_container_name)
         assert.is_nil(enriched_record.docker_container_image)
-        assert.are.equal('disk', enriched_record.source)
+        assert.are.equal('unknown', enriched_record.source)
 
         io.open:revert()
     end)
@@ -314,10 +314,8 @@ describe("Docker Metadata Enrichment", function()
         docker_metadata.get_container_metadata_from_disk:revert()
     end)
 
-    -- Removed container must not poison the cache.
-    -- Previously the missing-config-file path cached an entry without a 'time'
-    -- field, and every later expiry check raised
-    it("caches a timestamped entry when the Docker config file is missing", function()
+    -- Removed container must not poison the cache
+    it("caches nothing when the Docker config file is missing", function()
         local container_id = "deadbeef1234"
         local tag = "containers." .. container_id
         local timestamp = os.time()
@@ -326,9 +324,7 @@ describe("Docker Metadata Enrichment", function()
         docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "log message" })
         io.open:revert()
 
-        local cached = docker_metadata.cache[container_id]
-        assert.is_not_nil(cached)
-        assert.are.equal('number', type(cached['time']))
+        assert.is_nil(docker_metadata.cache[container_id])
     end)
 
     it("keeps enriching records for a container whose config file is gone", function()
@@ -338,10 +334,9 @@ describe("Docker Metadata Enrichment", function()
 
         stub(io, "open", function() return nil end)
 
-        -- First record populates the negative-cache entry.
         docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "first" })
 
-        -- Second record reads that entry back; this used to throw.
+        -- Second record retries the read; this used to throw
         local status, _, enriched_record =
             docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "second" })
 
@@ -349,6 +344,7 @@ describe("Docker Metadata Enrichment", function()
 
         assert.are.equal(1, status)
         assert.are.equal(container_id, enriched_record.docker_container_id)
+        assert.are.equal('unknown', enriched_record.source)
     end)
 
     it("cleans up a cache entry that has no valid timestamp", function()

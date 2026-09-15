@@ -65,6 +65,10 @@ logzio/docker-logs-collector:latest
 Spin up your Docker containers if you haven’t done so already. Give your logs a few minutes to get from your system to your Logz.io account.
 
 ### Change log
+- 0.2.1:
+  - Fixed a crash in the Docker metadata filter when a container's config file is missing, e.g. after a container is removed while its logs are still being tailed. A single removed container could stop metadata enrichment for all containers until restart.
+  - Records for containers with no config file are now tagged `source: unknown` instead of `source: disk`.
+  - Cache entries without a valid timestamp are evicted instead of failing every subsequent record.
 - 0.2.0
   - Upgrade FluentBit from `v3.1.4` to `v4.1.1`
   - Upgrade Python to `v3.14.0`

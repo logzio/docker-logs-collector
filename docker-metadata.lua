@@ -48,10 +48,7 @@ function M.get_container_metadata_from_disk(container_id)
   local fl = io.open(docker_config_file, 'r')
   if fl == nil then
     debug_print("Failed to open file:", docker_config_file)
-    -- The container is gone (removed while its logs were still being tailed).
-    -- Stamp the entry so it behaves as a TTL'd negative-cache entry rather than
-    -- a malformed one that breaks every later cache expiry check.
-    return { source = 'disk', time = os.time() }
+    return nil
   end
 
   local data = { time = os.time() }
