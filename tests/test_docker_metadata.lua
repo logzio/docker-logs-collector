@@ -156,7 +156,7 @@ describe("Docker Metadata Enrichment", function()
         -- Check that the metadata fields are not added
         assert.is_nil(enriched_record.docker_container_name)
         assert.is_nil(enriched_record.docker_container_image)
-        assert.are.equal('disk', enriched_record.source)
+        assert.are.equal('unknown', enriched_record.source)
 
         io.open:revert()
     end)
@@ -312,6 +312,56 @@ describe("Docker Metadata Enrichment", function()
 
         -- Restore the original function
         docker_metadata.get_container_metadata_from_disk:revert()
+    end)
+
+    -- Removed container must not poison the cache
+    it("caches nothing when the Docker config file is missing", function()
+        local container_id = "deadbeef1234"
+        local tag = "containers." .. container_id
+        local timestamp = os.time()
+
+        stub(io, "open", function() return nil end)
+        docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "log message" })
+        io.open:revert()
+
+        assert.is_nil(docker_metadata.cache[container_id])
+    end)
+
+    it("keeps enriching records for a container whose config file is gone", function()
+        local container_id = "deadbeef1234"
+        local tag = "containers." .. container_id
+        local timestamp = os.time()
+
+        stub(io, "open", function() return nil end)
+
+        docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "first" })
+
+        -- Second record retries the read; this used to throw
+        local status, _, enriched_record =
+            docker_metadata.enrich_with_docker_metadata(tag, timestamp, { log = "second" })
+
+        io.open:revert()
+
+        assert.are.equal(1, status)
+        assert.are.equal(container_id, enriched_record.docker_container_id)
+        assert.are.equal('unknown', enriched_record.source)
+    end)
+
+    it("cleans up a cache entry that has no valid timestamp", function()
+        local poisoned_id = "deadbeef1234"
+        local healthy_id = "abc123def456"
+
+        -- Simulate an entry written by an older version of the filter.
+        docker_metadata.cache[poisoned_id] = { source = 'disk' }
+        docker_metadata.cache[healthy_id] = {
+            time = os.time(),
+            docker_container_name = "container-one"
+        }
+
+        docker_metadata.cleanup_cache()
+
+        assert.is_nil(docker_metadata.cache[poisoned_id])
+        assert.is_not_nil(docker_metadata.cache[healthy_id])
     end)
 
 end)

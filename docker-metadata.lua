@@ -48,7 +48,7 @@ function M.get_container_metadata_from_disk(container_id)
   local fl = io.open(docker_config_file, 'r')
   if fl == nil then
     debug_print("Failed to open file:", docker_config_file)
-    return { source = 'disk' }
+    return nil
   end
 
   local data = { time = os.time() }
@@ -77,7 +77,8 @@ end
 function M.cleanup_cache()
   local current_time = os.time()
   for container_id, cached_data in pairs(M.cache) do
-    if current_time - cached_data['time'] > M.CACHE_TTL_SEC then
+    if type(cached_data['time']) ~= 'number'
+        or current_time - cached_data['time'] > M.CACHE_TTL_SEC then
       M.cache[container_id] = nil
       debug_print("Removed expired cache entry for container:", container_id)
     end
@@ -107,7 +108,8 @@ function M.enrich_with_docker_metadata(tag, timestamp, record)
   new_record['docker_container_id'] = container_id
 
   local cached_data = M.cache[container_id]
-  if cached_data == nil or (current_time - cached_data['time'] > M.CACHE_TTL_SEC) then
+  if cached_data == nil or type(cached_data['time']) ~= 'number'
+      or (current_time - cached_data['time'] > M.CACHE_TTL_SEC) then
     cached_data = M.get_container_metadata_from_disk(container_id)
     if cached_data then
       M.cache[container_id] = cached_data
